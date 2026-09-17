@@ -3,6 +3,7 @@
 # ============================================================
 import requests
 import os
+import html
 
 def send_telegram(snapshot: dict, analysis: str):
     token   = os.environ["TELEGRAM_BOT_TOKEN"]
@@ -31,19 +32,22 @@ def send_telegram(snapshot: dict, analysis: str):
     usd = vn.get("usd_vnd") or {}
 
     # Cắt phần AI analysis vừa đủ cho Telegram (max ~3000 ký tự)
-    ai_text = analysis[:2800] + ("..." if len(analysis) > 2800 else "")
+    ai_text_raw = analysis[:2800] + ("..." if len(analysis) > 2800 else "")
+    # Escape để nội dung AI (có thể chứa <, >, & hoặc markdown lạ)
+    # không phá cú pháp HTML của Telegram
+    ai_text = html.escape(ai_text_raw)
 
-    message = f"""📊 *BẢN TIN THỊ TRƯỜNG · {date}*
+    message = f"""📊 <b>BẢN TIN THỊ TRƯỜNG · {date}</b>
 ━━━━━━━━━━━━━━━━━━━
 
-🌍 *THẾ GIỚI HÔM QUA*
-S\\&P500  {val(sp,'close')}  {pct(sp,'change_pct')}
+🌍 <b>THẾ GIỚI HÔM QUA</b>
+S&amp;P500  {val(sp,'close')}  {pct(sp,'change_pct')}
 Nasdaq   {val(nd,'close')}  {pct(nd,'change_pct')}
 DXY      {val(dxy,'close')}  {pct(dxy,'change_pct')}
 VIX      {val(vix,'close')}  {pct(vix,'change_pct')}
 
-🇻🇳 *VIỆT NAM HÔM QUA*
-VN\\-Index  {val(vni,'close')} điểm  {pct(vni,'change_pct')}
+🇻🇳 <b>VIỆT NAM HÔM QUA</b>
+VN-Index  {val(vni,'close')} điểm  {pct(vni,'change_pct')}
 Khối ngoại  {val(fn,'net_bn_vnd')} tỷ VND
 USD/VND  {val(usd,'sell_rate',',')}
 
@@ -54,7 +58,7 @@ USD/VND  {val(usd,'sell_rate',',')}
     r = requests.post(url, json={
         "chat_id"                : chat_id,
         "text"                   : message,
-        "parse_mode"             : "Markdown",
+        "parse_mode"             : "HTML",
         "disable_web_page_preview": True
     }, timeout=15)
     r.raise_for_status()
