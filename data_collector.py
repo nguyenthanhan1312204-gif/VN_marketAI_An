@@ -27,6 +27,33 @@ def get_trading_date() -> str:
     yesterday = today - timedelta(days=delta)
     return yesterday.strftime("%Y-%m-%d")
 
+def _fetch_yf_ticker(symbol: str, date_str: str) -> dict | None:
+    """Tải 1 mã qua yfinance (đã vượt chặn bằng curl_cffi), trả về close/change_pct hoặc None."""
+    start_dt = datetime.strptime(date_str, "%Y-%m-%d") - timedelta(days=5)
+    end_dt   = datetime.strptime(date_str, "%Y-%m-%d") + timedelta(days=1)
+    df = yf.download(symbol,
+                     start=start_dt.strftime("%Y-%m-%d"),
+                     end=end_dt.strftime("%Y-%m-%d"),
+                     progress=False, auto_adjust=True,
+                     session=YF_SESSION)
+    if df.empty:
+        return None
+    if isinstance(df.columns, pd.MultiIndex):
+        df.columns = df.columns.get_level_values(0)
+
+    row      = df.iloc[-1]
+    prev_row = df.iloc[-2] if len(df) >= 2 else df.iloc[-1]
+    close      = float(row["Close"])
+    prev_close = float(prev_row["Close"])
+    change_pct = round(((close - prev_close) / prev_close) * 100, 2)
+    volume     = int(row["Volume"]) if pd.notna(row.get("Volume")) else 0
+    return {
+        "symbol"     : symbol,
+        "close"      : round(close, 2),
+        "change_pct" : change_pct,
+        "volume"     : volume,
+    }
+
 def fetch_global_markets(date_str: str) -> dict:
     tickers = {
         "sp500"   : "^GSPC",
@@ -39,42 +66,14 @@ def fetch_global_markets(date_str: str) -> dict:
         "dax"     : "^GDAXI",
     }
     result = {}
-    start_dt = datetime.strptime(date_str, "%Y-%m-%d") - timedelta(days=5)
-    end_dt   = datetime.strptime(date_str, "%Y-%m-%d") + timedelta(days=1)
-
     for name, symbol in tickers.items():
         try:
-            df = yf.download(symbol,
-                             start=start_dt.strftime("%Y-%m-%d"),
-                             end=end_dt.strftime("%Y-%m-%d"),
-                             progress=False, auto_adjust=True,
-                             session=YF_SESSION)
-            if df.empty:
+            data = _fetch_yf_ticker(symbol, date_str)
+            if data is None:
                 logger.warning(f"No data for {symbol}")
-                result[name] = None
-                continue
-
-            # yfinance bản mới trả về cột dạng MultiIndex (Close, AAPL) ngay cả
-            # khi chỉ tải 1 mã — làm phẳng về 1 lớp cột để lấy giá trị đơn giản
-            if isinstance(df.columns, pd.MultiIndex):
-                df.columns = df.columns.get_level_values(0)
-
-            # Lấy 2 phiên gần nhất để tính % thay đổi
-            row      = df.iloc[-1]
-            prev_row = df.iloc[-2] if len(df) >= 2 else df.iloc[-1]
-
-            close      = float(row["Close"])
-            prev_close = float(prev_row["Close"])
-            change_pct = round(((close - prev_close) / prev_close) * 100, 2)
-            volume     = int(row["Volume"]) if pd.notna(row.get("Volume")) else 0
-
-            result[name] = {
-                "symbol"     : symbol,
-                "close"      : round(close, 2),
-                "change_pct" : change_pct,
-                "volume"     : volume,
-            }
-            logger.info(f"✓ {name}: {close} ({change_pct:+.2f}%)")
+            else:
+                logger.info(f"✓ {name}: {data['close']} ({data['change_pct']:+.2f}%)")
+            result[name] = data
         except Exception as e:
             logger.error(f"✗ {name}: {e}")
             result[name] = None
@@ -84,79 +83,70 @@ def fetch_vn_market(date_str: str) -> dict:
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
     result  = {}
 
-    # 1) VN-Index qua TCBS API
+    # 1) VN-Index — API cũ của TCBS đã ngừng hoạt động (404 "Service not found").
+    #    Chuyển sang lấy qua Yahoo Finance (đã vượt chặn bằng curl_cffi ở trên).
     try:
-        url = f"https://apipubaws.tcbs.com.vn/stock-insight/v2/overview/market?date={date_str}"
-        r   = requests.get(url, headers=headers, timeout=10)
-        logger.info(f"[DEBUG TCBS] status={r.status_code} body[:300]={r.text[:300]!r}")
-        data = r.json()
-        indices = data.get("marketIndices", [])
-        logger.info(f"[DEBUG TCBS] marketIndices count={len(indices)}")
-        vni = next((x for x in indices if x.get("comGroupCode") == "VNINDEX"), {})
-        if not vni:
-            logger.warning(f"[DEBUG TCBS] Không tìm thấy VNINDEX. comGroupCode có sẵn: {[x.get('comGroupCode') for x in indices]}")
+        data = _fetch_yf_ticker("^VNINDEX.VN", date_str)
+        if data is None:
+            logger.warning("[DEBUG VN-Index] Yahoo không có dữ liệu cho ^VNINDEX.VN")
         result["vnindex"] = {
-            "close"       : vni.get("indexValue"),
-            "change_pct"  : vni.get("percentChange"),
-            "volume"      : vni.get("totalVolume"),
-            "value_bn_vnd": vni.get("totalValue"),
-            "advances"    : vni.get("advances"),
-            "declines"    : vni.get("declines"),
-        }
-        logger.info(f"✓ VN-Index: {result['vnindex']['close']}")
+            "close"      : data["close"] if data else None,
+            "change_pct" : data["change_pct"] if data else None,
+            "volume"     : data["volume"] if data else None,
+        } if data else None
+        logger.info(f"✓ VN-Index: {(result['vnindex'] or {}).get('close')}")
     except Exception as e:
-        logger.error(f"✗ TCBS: {e}")
+        logger.error(f"✗ VN-Index (Yahoo): {e}")
         result["vnindex"] = None
 
-    # 2) Khối ngoại từ CafeF
+    # 2) Khối ngoại từ CafeF — trang này đã đổi cấu trúc/đường dẫn (404), chưa tìm
+    #    được nguồn thay thế đáng tin cậy. Giữ code cũ ở dạng best-effort, không
+    #    chặn toàn bộ script nếu lỗi. Log debug giúp xác định vấn đề ở lần chạy sau.
     try:
         date_fmt = datetime.strptime(date_str, "%Y-%m-%d").strftime("%d/%m/%Y")
         url = f"https://s.cafef.vn/du-lieu-giao-dich/{date_fmt}/hose/"
         r   = requests.get(url, headers=headers, timeout=10)
         logger.info(f"[DEBUG CafeF] status={r.status_code} url={url} len(content)={len(r.content)}")
-        soup = BeautifulSoup(r.content, "html.parser")
-        tables = soup.find_all("table")
-        logger.info(f"[DEBUG CafeF] số bảng tìm thấy trên trang: {len(tables)}")
         foreign_net = None
-        for tbl in tables:
-            try:
-                df = pd.read_html(str(tbl))[0]
-                # Tìm dòng có tổng khối ngoại
-                for _, row in df.iterrows():
-                    row_str = " ".join(str(v) for v in row.values)
-                    if "khối ngoại" in row_str.lower() or "foreign" in row_str.lower():
-                        nums = pd.to_numeric(pd.Series(list(row.values)), errors='coerce').dropna()
-                        if len(nums) >= 1:
-                            net = float(nums.iloc[-1])
-                            foreign_net = {"net_bn_vnd": round(net, 1), "action": "buy" if net > 0 else "sell"}
-                        break
-            except:
-                continue
-        if foreign_net is None:
-            logger.warning("[DEBUG CafeF] Không tìm thấy dòng 'khối ngoại' trong bất kỳ bảng nào")
+        if r.status_code == 200:
+            soup = BeautifulSoup(r.content, "html.parser")
+            tables = soup.find_all("table")
+            logger.info(f"[DEBUG CafeF] số bảng tìm thấy trên trang: {len(tables)}")
+            for tbl in tables:
+                try:
+                    df = pd.read_html(str(tbl))[0]
+                    for _, row in df.iterrows():
+                        row_str = " ".join(str(v) for v in row.values)
+                        if "khối ngoại" in row_str.lower() or "foreign" in row_str.lower():
+                            nums = pd.to_numeric(pd.Series(list(row.values)), errors='coerce').dropna()
+                            if len(nums) >= 1:
+                                net = float(nums.iloc[-1])
+                                foreign_net = {"net_bn_vnd": round(net, 1), "action": "buy" if net > 0 else "sell"}
+                            break
+                except:
+                    continue
+        else:
+            logger.warning(f"[DEBUG CafeF] URL trả về status {r.status_code}, có thể trang đã đổi cấu trúc")
         result["foreign_net"] = foreign_net
         logger.info(f"✓ CafeF foreign: {foreign_net}")
     except Exception as e:
         logger.error(f"✗ CafeF: {e}")
         result["foreign_net"] = None
 
-    # 3) Tỷ giá USD/VND từ VCB
+    # 3) Tỷ giá USD/VND — API cũ của Vietcombank đã đổi domain (404).
+    #    Chuyển sang lấy qua Yahoo Finance (mã USDVND=X).
     try:
-        url = "https://www.vietcombank.com.vn/api/exchangerates"
-        r   = requests.get(url, headers=headers, timeout=8)
-        logger.info(f"[DEBUG VCB] status={r.status_code} body[:300]={r.text[:300]!r}")
-        ex  = r.json()
-        usd = next((x for x in ex.get("data", []) if x.get("currencyCode") == "USD"), {})
-        if not usd:
-            logger.warning(f"[DEBUG VCB] Không tìm thấy USD. Cấu trúc JSON keys: {list(ex.keys())}")
+        data = _fetch_yf_ticker("USDVND=X", date_str)
+        if data is None:
+            logger.warning("[DEBUG USD/VND] Yahoo không có dữ liệu cho USDVND=X")
         result["usd_vnd"] = {
-            "sell_rate": usd.get("sell"),
-            "buy_rate" : usd.get("buy"),
-            "source"   : "Vietcombank"
-        }
-        logger.info(f"✓ USD/VND: {result['usd_vnd']['sell_rate']}")
+            "sell_rate": data["close"] if data else None,
+            "buy_rate" : None,
+            "source"   : "Yahoo Finance (USDVND=X)"
+        } if data else None
+        logger.info(f"✓ USD/VND: {(result['usd_vnd'] or {}).get('sell_rate')}")
     except Exception as e:
-        logger.error(f"✗ USD/VND: {e}")
+        logger.error(f"✗ USD/VND (Yahoo): {e}")
         result["usd_vnd"] = None
 
     return result
