@@ -1,0 +1,7 @@
+yfinance==0.2.36
+pandas==2.2.2
+requests==2.31.0
+beautifulsoup4==4.12.3
+pytz==2024.1
+anthropic==0.29.0
+lxml==5.2.2
