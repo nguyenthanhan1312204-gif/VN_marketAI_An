@@ -9,9 +9,14 @@ import logging
 from datetime import datetime, timedelta
 from bs4 import BeautifulSoup
 import pytz
+from curl_cffi import requests as cffi_requests
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
 logger = logging.getLogger(__name__)
+
+# Yahoo Finance chặn client mặc định từ IP máy chủ (như GitHub Actions).
+# Dùng curl_cffi để giả lập trình duyệt Chrome thật, tránh bị chặn/rate-limit.
+YF_SESSION = cffi_requests.Session(impersonate="chrome")
 
 VN_TZ  = pytz.timezone('Asia/Ho_Chi_Minh')
 UTC_TZ = pytz.utc
@@ -42,7 +47,8 @@ def fetch_global_markets(date_str: str) -> dict:
             df = yf.download(symbol,
                              start=start_dt.strftime("%Y-%m-%d"),
                              end=end_dt.strftime("%Y-%m-%d"),
-                             progress=False, auto_adjust=True)
+                             progress=False, auto_adjust=True,
+                             session=YF_SESSION)
             if df.empty:
                 logger.warning(f"No data for {symbol}")
                 result[name] = None
