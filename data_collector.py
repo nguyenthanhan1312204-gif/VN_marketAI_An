@@ -88,9 +88,13 @@ def fetch_vn_market(date_str: str) -> dict:
     try:
         url = f"https://apipubaws.tcbs.com.vn/stock-insight/v2/overview/market?date={date_str}"
         r   = requests.get(url, headers=headers, timeout=10)
+        logger.info(f"[DEBUG TCBS] status={r.status_code} body[:300]={r.text[:300]!r}")
         data = r.json()
         indices = data.get("marketIndices", [])
+        logger.info(f"[DEBUG TCBS] marketIndices count={len(indices)}")
         vni = next((x for x in indices if x.get("comGroupCode") == "VNINDEX"), {})
+        if not vni:
+            logger.warning(f"[DEBUG TCBS] Không tìm thấy VNINDEX. comGroupCode có sẵn: {[x.get('comGroupCode') for x in indices]}")
         result["vnindex"] = {
             "close"       : vni.get("indexValue"),
             "change_pct"  : vni.get("percentChange"),
@@ -109,8 +113,10 @@ def fetch_vn_market(date_str: str) -> dict:
         date_fmt = datetime.strptime(date_str, "%Y-%m-%d").strftime("%d/%m/%Y")
         url = f"https://s.cafef.vn/du-lieu-giao-dich/{date_fmt}/hose/"
         r   = requests.get(url, headers=headers, timeout=10)
+        logger.info(f"[DEBUG CafeF] status={r.status_code} url={url} len(content)={len(r.content)}")
         soup = BeautifulSoup(r.content, "html.parser")
         tables = soup.find_all("table")
+        logger.info(f"[DEBUG CafeF] số bảng tìm thấy trên trang: {len(tables)}")
         foreign_net = None
         for tbl in tables:
             try:
@@ -126,6 +132,8 @@ def fetch_vn_market(date_str: str) -> dict:
                         break
             except:
                 continue
+        if foreign_net is None:
+            logger.warning("[DEBUG CafeF] Không tìm thấy dòng 'khối ngoại' trong bất kỳ bảng nào")
         result["foreign_net"] = foreign_net
         logger.info(f"✓ CafeF foreign: {foreign_net}")
     except Exception as e:
@@ -136,8 +144,11 @@ def fetch_vn_market(date_str: str) -> dict:
     try:
         url = "https://www.vietcombank.com.vn/api/exchangerates"
         r   = requests.get(url, headers=headers, timeout=8)
+        logger.info(f"[DEBUG VCB] status={r.status_code} body[:300]={r.text[:300]!r}")
         ex  = r.json()
         usd = next((x for x in ex.get("data", []) if x.get("currencyCode") == "USD"), {})
+        if not usd:
+            logger.warning(f"[DEBUG VCB] Không tìm thấy USD. Cấu trúc JSON keys: {list(ex.keys())}")
         result["usd_vnd"] = {
             "sell_rate": usd.get("sell"),
             "buy_rate" : usd.get("buy"),
