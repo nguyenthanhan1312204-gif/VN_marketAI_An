@@ -49,7 +49,7 @@ VIX      {val(vix,'close')}  {pct(vix,'change_pct')}
 🇻🇳 <b>VIỆT NAM HÔM QUA</b>
 VN-Index  {val(vni,'close')} điểm  {pct(vni,'change_pct')}
 Khối ngoại  {val(fn,'net_bn_vnd')} tỷ VND
-USD/VND  {val(usd,'sell_rate',',')}
+USD/VND  {val(usd,'sell_rate','.0f')}
 
 ━━━━━━━━━━━━━━━━━━━
 {ai_text}"""
@@ -61,6 +61,10 @@ USD/VND  {val(usd,'sell_rate',',')}
         "parse_mode"             : "HTML",
         "disable_web_page_preview": True
     }, timeout=15)
+
+    if not r.ok:
+        print(f"❌ Telegram error {r.status_code}: {r.text}")
+
     r.raise_for_status()
     print(f"✅ Telegram sent: {r.json().get('ok')}")
     return r.json()
