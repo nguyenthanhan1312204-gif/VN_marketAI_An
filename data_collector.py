@@ -54,19 +54,25 @@ def fetch_global_markets(date_str: str) -> dict:
                 result[name] = None
                 continue
 
+            # yfinance bản mới trả về cột dạng MultiIndex (Close, AAPL) ngay cả
+            # khi chỉ tải 1 mã — làm phẳng về 1 lớp cột để lấy giá trị đơn giản
+            if isinstance(df.columns, pd.MultiIndex):
+                df.columns = df.columns.get_level_values(0)
+
             # Lấy 2 phiên gần nhất để tính % thay đổi
             row      = df.iloc[-1]
             prev_row = df.iloc[-2] if len(df) >= 2 else df.iloc[-1]
 
-            close      = float(row["Close"].iloc[0] if hasattr(row["Close"], 'iloc') else row["Close"])
-            prev_close = float(prev_row["Close"].iloc[0] if hasattr(prev_row["Close"], 'iloc') else prev_row["Close"])
+            close      = float(row["Close"])
+            prev_close = float(prev_row["Close"])
             change_pct = round(((close - prev_close) / prev_close) * 100, 2)
+            volume     = int(row["Volume"]) if pd.notna(row.get("Volume")) else 0
 
             result[name] = {
                 "symbol"     : symbol,
                 "close"      : round(close, 2),
                 "change_pct" : change_pct,
-                "volume"     : int(row.get("Volume", 0)) if row.get("Volume") else 0,
+                "volume"     : volume,
             }
             logger.info(f"✓ {name}: {close} ({change_pct:+.2f}%)")
         except Exception as e:
