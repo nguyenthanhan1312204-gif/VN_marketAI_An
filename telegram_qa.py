@@ -79,7 +79,7 @@ def ask_gemini(question: str, context: str) -> str:
     payload = {
         "system_instruction": {"parts": [{"text": QA_SYSTEM_PROMPT}]},
         "contents": [{"role": "user", "parts": [{"text": prompt}]}],
-        "generationConfig": {"maxOutputTokens": 1500}
+        "generationConfig": {"maxOutputTokens": 6000}
     }
     resp = requests.post(GEMINI_URL, params={"key": api_key}, json=payload, timeout=120)
     resp.raise_for_status()
