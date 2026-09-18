@@ -1,0 +1,43 @@
+name: Telegram Q&A
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  answer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Answer Telegram questions
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID:   ${{ secrets.TELEGRAM_CHAT_ID }}
+          GEMINI_API_KEY:     ${{ secrets.GEMINI_API_KEY }}
+        run: python telegram_qa.py
+
+      - name: Commit state (nếu có thay đổi)
+        run: |
+          git config user.name "vn-market-bot"
+          git config user.email "actions@github.com"
+          git add state/telegram_state.json
+          git diff --cached --quiet || git commit -m "chore: update telegram poll state [skip ci]"
+          git pull --rebase
+          git push
