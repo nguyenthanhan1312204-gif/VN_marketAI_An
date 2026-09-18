@@ -105,7 +105,7 @@ def run_agent(snapshot: dict) -> str:
         GEMINI_URL,
         params={"key": api_key},
         json=payload,
-        timeout=60
+        timeout=120
     )
     resp.raise_for_status()
     data = resp.json()
