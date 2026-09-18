@@ -4,6 +4,17 @@
 import requests
 import os
 import html
+import re
+
+def _markdown_to_telegram_html(text: str) -> str:
+    """Chuyển Markdown cơ bản (Gemini hay trả về **đậm**, ### tiêu đề) sang
+    thẻ HTML mà Telegram hiểu, đồng thời escape an toàn phần còn lại."""
+    escaped = html.escape(text)
+    # **đậm** -> <b>đậm</b>
+    escaped = re.sub(r'\*\*(.+?)\*\*', r'<b>\1</b>', escaped)
+    # ### Tiêu đề (ở đầu dòng) -> <b>Tiêu đề</b>
+    escaped = re.sub(r'^#{1,6}\s*(.+)$', r'<b>\1</b>', escaped, flags=re.MULTILINE)
+    return escaped
 
 def send_telegram(snapshot: dict, analysis: str):
     token   = os.environ["TELEGRAM_BOT_TOKEN"]
@@ -34,8 +45,8 @@ def send_telegram(snapshot: dict, analysis: str):
     # Cắt phần AI analysis vừa đủ cho Telegram (max ~3000 ký tự)
     ai_text_raw = analysis[:2800] + ("..." if len(analysis) > 2800 else "")
     # Escape để nội dung AI (có thể chứa <, >, & hoặc markdown lạ)
-    # không phá cú pháp HTML của Telegram
-    ai_text = html.escape(ai_text_raw)
+    # không phá cú pháp HTML của Telegram, đồng thời hiển thị đậm/tiêu đề đúng
+    ai_text = _markdown_to_telegram_html(ai_text_raw)
 
     message = f"""📊 <b>BẢN TIN THỊ TRƯỜNG · {date}</b>
 ━━━━━━━━━━━━━━━━━━━
