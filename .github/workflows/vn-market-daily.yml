@@ -5,6 +5,9 @@ on:
     - cron: '0 0 * * 1-5'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   run-agent:
     runs-on: ubuntu-latest
@@ -29,6 +32,16 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID:   ${{ secrets.TELEGRAM_CHAT_ID }}
         run: python main.py
+
+      - name: Commit latest snapshot & report (để bot Q&A đọc được)
+        if: always()
+        run: |
+          git config user.name "vn-market-bot"
+          git config user.email "actions@github.com"
+          git add snapshots/ reports/
+          git diff --cached --quiet || git commit -m "chore: update market snapshot ${{ github.run_id }} [skip ci]"
+          git pull --rebase
+          git push
 
       - name: Upload reports
         uses: actions/upload-artifact@v4
