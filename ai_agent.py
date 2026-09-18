@@ -97,10 +97,12 @@ def run_agent(snapshot: dict) -> str:
             }
         ],
         "generationConfig": {
-            # Bài phân tích đủ 4 phần (điểm tin, tác động, kịch bản, khuyến nghị)
-            # bằng tiếng Việt cần nhiều token hơn 1500 — 1500 hay bị cắt cụt giữa
-            # chừng. Nâng lên 4000 để đủ viết trọn vẹn.
-            "maxOutputTokens": 4000
+            # Gemini free tier giới hạn theo RPM/TPM/RPD (lượt gọi & token mỗi PHÚT,
+            # lượt gọi mỗi NGÀY) — không phải "tổng token/ngày". Với tần suất dùng ở
+            # đây (vài lượt gọi/ngày), ta còn rất xa các giới hạn đó. maxOutputTokens
+            # chỉ giới hạn độ dài 1 câu trả lời — đặt rộng rãi (8000, cách xa mức tối
+            # đa ~64000 của model) để không bao giờ bị cắt cụt giữa chừng nữa.
+            "maxOutputTokens": 8000
         }
     }
 
