@@ -27,9 +27,12 @@ def get_trading_date() -> str:
     yesterday = today - timedelta(days=delta)
     return yesterday.strftime("%Y-%m-%d")
 
-def _fetch_yf_ticker(symbol: str, date_str: str) -> dict | None:
-    """Tải 1 mã qua yfinance (đã vượt chặn bằng curl_cffi), trả về close/change_pct hoặc None."""
-    start_dt = datetime.strptime(date_str, "%Y-%m-%d") - timedelta(days=5)
+def _fetch_yf_ticker(symbol: str, date_str: str, lookback_days: int = 5) -> dict | None:
+    """Tải 1 mã qua yfinance (đã vượt chặn bằng curl_cffi), trả về close/change_pct hoặc None.
+    lookback_days: số ngày lùi lại để tìm dữ liệu — một số mã (như VN-Index) Yahoo
+    không cập nhật đều đặn mỗi ngày, cần khoảng tìm rộng hơn mới đủ 2 phiên để tính %.
+    """
+    start_dt = datetime.strptime(date_str, "%Y-%m-%d") - timedelta(days=lookback_days)
     end_dt   = datetime.strptime(date_str, "%Y-%m-%d") + timedelta(days=1)
     df = yf.download(symbol,
                      start=start_dt.strftime("%Y-%m-%d"),
@@ -43,6 +46,8 @@ def _fetch_yf_ticker(symbol: str, date_str: str) -> dict | None:
 
     row      = df.iloc[-1]
     prev_row = df.iloc[-2] if len(df) >= 2 else df.iloc[-1]
+    if len(df) < 2:
+        logger.warning(f"[DEBUG {symbol}] Chỉ có {len(df)} phiên dữ liệu trong khoảng tìm kiếm -> change_pct sẽ là 0%")
     close      = float(row["Close"])
     prev_close = float(prev_row["Close"])
     change_pct = round(((close - prev_close) / prev_close) * 100, 2)
@@ -86,7 +91,7 @@ def fetch_vn_market(date_str: str) -> dict:
     # 1) VN-Index — API cũ của TCBS đã ngừng hoạt động (404 "Service not found").
     #    Chuyển sang lấy qua Yahoo Finance (đã vượt chặn bằng curl_cffi ở trên).
     try:
-        data = _fetch_yf_ticker("^VNINDEX.VN", date_str)
+        data = _fetch_yf_ticker("^VNINDEX.VN", date_str, lookback_days=15)
         if data is None:
             logger.warning("[DEBUG VN-Index] Yahoo không có dữ liệu cho ^VNINDEX.VN")
         result["vnindex"] = {
@@ -99,12 +104,20 @@ def fetch_vn_market(date_str: str) -> dict:
         logger.error(f"✗ VN-Index (Yahoo): {e}")
         result["vnindex"] = None
 
-    # 2) Khối ngoại từ CafeF — trang này đã đổi cấu trúc/đường dẫn (404), chưa tìm
-    #    được nguồn thay thế đáng tin cậy. Giữ code cũ ở dạng best-effort, không
-    #    chặn toàn bộ script nếu lỗi. Log debug giúp xác định vấn đề ở lần chạy sau.
+    # 2) Khối ngoại từ CafeF.
+    #    Đường dẫn cũ (s.cafef.vn/du-lieu-giao-dich/...) đã bị gỡ bỏ (404).
+    #    Đường dẫn mới: cafef.vn/du-lieu/tracuulichsu2/3/hose/today.chn — NHƯNG trang
+    #    này tải bảng dữ liệu bằng JavaScript (client-side render), nên requests+
+    #    BeautifulSoup (chỉ đọc HTML tĩnh) sẽ luôn thấy bảng rỗng, không có cách nào
+    #    lấy được số liệu qua phương pháp này. Cần 1 trong 2 hướng để khắc phục thật:
+    #      a) Tìm ra API JSON nội bộ mà trang này gọi ngầm (mở DevTools > Network > XHR
+    #         khi tải trang, tìm request trả về JSON chứa "khối ngoại") — nhanh nhất nếu
+    #         bạn tự làm vì có thể thao tác trực tiếp trên trình duyệt.
+    #      b) Dùng thư viện vnstock (nếu tìm được hàm phù hợp và kiểm chứng được).
+    #    Hiện tại giữ code ở dạng best-effort: không lỗi/crash, chỉ trả None.
     try:
         date_fmt = datetime.strptime(date_str, "%Y-%m-%d").strftime("%d/%m/%Y")
-        url = f"https://s.cafef.vn/du-lieu-giao-dich/{date_fmt}/hose/"
+        url = "https://cafef.vn/du-lieu/tracuulichsu2/3/hose/today.chn"
         r   = requests.get(url, headers=headers, timeout=10)
         logger.info(f"[DEBUG CafeF] status={r.status_code} url={url} len(content)={len(r.content)}")
         foreign_net = None
@@ -125,8 +138,10 @@ def fetch_vn_market(date_str: str) -> dict:
                             break
                 except:
                     continue
+            if foreign_net is None:
+                logger.warning("[DEBUG CafeF] Trang tải bằng JavaScript nên không có bảng dữ liệu trong HTML tĩnh — cần tìm API JSON ngầm (xem comment phía trên) để lấy được số liệu")
         else:
-            logger.warning(f"[DEBUG CafeF] URL trả về status {r.status_code}, có thể trang đã đổi cấu trúc")
+            logger.warning(f"[DEBUG CafeF] URL trả về status {r.status_code}")
         result["foreign_net"] = foreign_net
         logger.info(f"✓ CafeF foreign: {foreign_net}")
     except Exception as e:
