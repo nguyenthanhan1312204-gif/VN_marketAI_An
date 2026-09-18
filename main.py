@@ -31,6 +31,10 @@ def main():
     path = f"snapshots/market_snapshot_{date}.json"
     with open(path, "w", encoding="utf-8") as f:
         json.dump(snapshot, f, ensure_ascii=False, indent=2)
+    # Lưu thêm bản "mới nhất" tên cố định để bot Q&A (telegram_qa.py) luôn
+    # biết chính xác file nào cần đọc, không phải tìm theo ngày.
+    with open("snapshots/latest.json", "w", encoding="utf-8") as f:
+        json.dump(snapshot, f, ensure_ascii=False, indent=2)
     logger.info(f"✅ Snapshot saved: {path}")
 
     # Bước 3: AI phân tích
@@ -41,6 +45,8 @@ def main():
     os.makedirs("reports", exist_ok=True)
     rpath = f"reports/analysis_{date}.md"
     with open(rpath, "w", encoding="utf-8") as f:
+        f.write(f"# Phân tích thị trường {date}\n\n{analysis}")
+    with open("reports/latest.md", "w", encoding="utf-8") as f:
         f.write(f"# Phân tích thị trường {date}\n\n{analysis}")
     logger.info(f"✅ Report saved: {rpath}")
 
