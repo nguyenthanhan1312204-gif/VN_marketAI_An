@@ -84,24 +84,66 @@ def fetch_global_markets(date_str: str) -> dict:
             result[name] = None
     return result
 
+def _fetch_vnindex_vnstock(date_str: str) -> dict | None:
+    """Lấy VN-Index qua thư viện vnstock (nguồn VCI) — Yahoo Finance không có
+    dữ liệu lịch sử đáng tin cậy cho mã này qua API tải xuống."""
+    try:
+        from vnstock import Quote
+    except ImportError as e:
+        logger.error(f"[DEBUG VN-Index vnstock] Chưa cài được thư viện vnstock: {e}")
+        return None
+    try:
+        end_dt   = datetime.strptime(date_str, "%Y-%m-%d")
+        start_dt = end_dt - timedelta(days=20)
+        quote = Quote(source="vci", symbol="VNINDEX")
+        df = quote.history(
+            start=start_dt.strftime("%Y-%m-%d"),
+            end=end_dt.strftime("%Y-%m-%d"),
+            interval="1D"
+        )
+        if df is None or df.empty:
+            logger.warning("[DEBUG VN-Index vnstock] Không có dữ liệu trả về")
+            return None
+
+        # Tên cột trả về có thể khác nhau tùy phiên bản (close/Close...) — chuẩn hóa lại
+        cols = {c.lower(): c for c in df.columns}
+        close_col = cols.get("close")
+        if close_col is None:
+            logger.warning(f"[DEBUG VN-Index vnstock] Không tìm thấy cột 'close'. Các cột có sẵn: {list(df.columns)}")
+            return None
+
+        close      = float(df.iloc[-1][close_col])
+        prev_close = float(df.iloc[-2][close_col]) if len(df) >= 2 else close
+        change_pct = round(((close - prev_close) / prev_close) * 100, 2) if prev_close else 0.0
+        logger.info(f"[DEBUG VN-Index vnstock] Lấy được {len(df)} phiên, phiên gần nhất: {close}")
+        return {"close": round(close, 2), "change_pct": change_pct, "volume": None}
+    except Exception as e:
+        logger.error(f"[DEBUG VN-Index vnstock] Lỗi: {e}")
+        return None
+
 def fetch_vn_market(date_str: str) -> dict:
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
     result  = {}
 
-    # 1) VN-Index — API cũ của TCBS đã ngừng hoạt động (404 "Service not found").
-    #    Chuyển sang lấy qua Yahoo Finance (đã vượt chặn bằng curl_cffi ở trên).
+    # 1) VN-Index — API cũ của TCBS đã ngừng hoạt động (404). Yahoo Finance cũng
+    #    không có dữ liệu lịch sử đáng tin cậy cho ^VNINDEX.VN (dù trang xem tồn tại,
+    #    API tải xuống báo "possibly delisted"). Dùng vnstock làm nguồn chính (chuyên
+    #    biệt cho chứng khoán VN), Yahoo làm dự phòng nếu vnstock cũng lỗi.
     try:
-        data = _fetch_yf_ticker("^VNINDEX.VN", date_str, lookback_days=15)
+        data = _fetch_vnindex_vnstock(date_str)
         if data is None:
-            logger.warning("[DEBUG VN-Index] Yahoo không có dữ liệu cho ^VNINDEX.VN")
+            logger.warning("[DEBUG VN-Index] vnstock không có dữ liệu, thử dự phòng qua Yahoo Finance")
+            data = _fetch_yf_ticker("^VNINDEX.VN", date_str, lookback_days=15)
+        if data is None:
+            logger.warning("[DEBUG VN-Index] Cả vnstock lẫn Yahoo đều không có dữ liệu")
         result["vnindex"] = {
             "close"      : data["close"] if data else None,
             "change_pct" : data["change_pct"] if data else None,
-            "volume"     : data["volume"] if data else None,
+            "volume"     : data.get("volume") if data else None,
         } if data else None
         logger.info(f"✓ VN-Index: {(result['vnindex'] or {}).get('close')}")
     except Exception as e:
-        logger.error(f"✗ VN-Index (Yahoo): {e}")
+        logger.error(f"✗ VN-Index: {e}")
         result["vnindex"] = None
 
     # 2) Khối ngoại từ CafeF.
