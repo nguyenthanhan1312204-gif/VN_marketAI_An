@@ -97,7 +97,10 @@ def run_agent(snapshot: dict) -> str:
             }
         ],
         "generationConfig": {
-            "maxOutputTokens": 1500
+            # Bài phân tích đủ 4 phần (điểm tin, tác động, kịch bản, khuyến nghị)
+            # bằng tiếng Việt cần nhiều token hơn 1500 — 1500 hay bị cắt cụt giữa
+            # chừng. Nâng lên 4000 để đủ viết trọn vẹn.
+            "maxOutputTokens": 4000
         }
     }
 
@@ -111,6 +114,11 @@ def run_agent(snapshot: dict) -> str:
     data = resp.json()
 
     try:
-        return data["candidates"][0]["content"]["parts"][0]["text"]
+        candidate = data["candidates"][0]
+        text = candidate["content"]["parts"][0]["text"]
+        finish_reason = candidate.get("finishReason")
+        if finish_reason == "MAX_TOKENS":
+            print(f"⚠️ Gemini bị cắt do hết token dù đã tăng giới hạn (finishReason=MAX_TOKENS, {len(text)} chars)")
+        return text
     except (KeyError, IndexError):
         raise RuntimeError(f"Gemini trả về dữ liệu không như mong đợi: {data}")
