@@ -1,0 +1,77 @@
+{
+  "metadata": {
+    "date": "2026-09-17",
+    "generated_at": "2026-09-18T11:34:33.892883+07:00",
+    "timezone": "Asia/Ho_Chi_Minh"
+  },
+  "us_market": {
+    "sp500": {
+      "symbol": "^GSPC",
+      "close": 7637.76,
+      "change_pct": 1.14,
+      "volume": 5058210000
+    },
+    "nasdaq": {
+      "symbol": "^NDX",
+      "close": 29446.98,
+      "change_pct": 1.73,
+      "volume": 9884890000
+    },
+    "dxy": {
+      "symbol": "DX-Y.NYB",
+      "close": 100.22,
+      "change_pct": -0.09,
+      "volume": 0
+    },
+    "vix": {
+      "symbol": "^VIX",
+      "close": 15.44,
+      "change_pct": -12.82,
+      "volume": 0
+    },
+    "gold": {
+      "symbol": "GC=F",
+      "close": 4399.7,
+      "change_pct": 0.28,
+      "volume": 249081
+    }
+  },
+  "eu_market": {
+    "stoxx50": {
+      "symbol": "^STOXX50E",
+      "close": 6322.9,
+      "change_pct": 0.9,
+      "volume": 17658700
+    },
+    "ftse100": {
+      "symbol": "^FTSE",
+      "close": 10816.1,
+      "change_pct": 1.19,
+      "volume": 674203200
+    },
+    "dax": {
+      "symbol": "^GDAXI",
+      "close": 25716.71,
+      "change_pct": 0.7,
+      "volume": 48628000
+    }
+  },
+  "vn_market": {
+    "vnindex": {
+      "close": 1839.67,
+      "change_pct": 0.93,
+      "volume": null
+    },
+    "foreign_net": null,
+    "usd_vnd": {
+      "sell_rate": 25990.0,
+      "buy_rate": null,
+      "source": "Yahoo Finance (USDVND=X)"
+    }
+  },
+  "derived": {
+    "us_sentiment": "STRONGLY_BULLISH",
+    "dxy_trend": "WEAKENING",
+    "risk_on": true
+  }
+}
