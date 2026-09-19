@@ -1,76 +1,76 @@
 {
   "metadata": {
-    "date": "2026-09-17",
-    "generated_at": "2026-09-18T11:53:33.855894+07:00",
+    "date": "2026-09-18",
+    "generated_at": "2026-09-19T09:23:25.373620+07:00",
     "timezone": "Asia/Ho_Chi_Minh"
   },
   "us_market": {
     "sp500": {
       "symbol": "^GSPC",
-      "close": 7637.76,
-      "change_pct": 1.14,
-      "volume": 5058210000
+      "close": 7650.5,
+      "change_pct": 0.17,
+      "volume": 6050102000
     },
     "nasdaq": {
       "symbol": "^NDX",
-      "close": 29446.98,
-      "change_pct": 1.73,
-      "volume": 9884890000
+      "close": 29644.17,
+      "change_pct": 0.67,
+      "volume": 2509025000
     },
     "dxy": {
       "symbol": "DX-Y.NYB",
-      "close": 100.22,
-      "change_pct": -0.09,
+      "close": 100.21,
+      "change_pct": -0.0,
       "volume": 0
     },
     "vix": {
       "symbol": "^VIX",
-      "close": 15.44,
-      "change_pct": -12.82,
+      "close": 14.81,
+      "change_pct": -4.08,
       "volume": 0
     },
     "gold": {
       "symbol": "GC=F",
-      "close": 4399.7,
-      "change_pct": 0.28,
-      "volume": 249081
+      "close": 4415.9,
+      "change_pct": 0.37,
+      "volume": 138899
     }
   },
   "eu_market": {
     "stoxx50": {
       "symbol": "^STOXX50E",
-      "close": 6322.9,
-      "change_pct": 0.9,
-      "volume": 17658700
+      "close": 6236.2,
+      "change_pct": -1.37,
+      "volume": 56283000
     },
     "ftse100": {
       "symbol": "^FTSE",
-      "close": 10816.1,
-      "change_pct": 1.19,
-      "volume": 674203200
+      "close": 10659.1,
+      "change_pct": -1.45,
+      "volume": 1825121500
     },
     "dax": {
       "symbol": "^GDAXI",
-      "close": 25716.71,
-      "change_pct": 0.7,
-      "volume": 48628000
+      "close": 25304.06,
+      "change_pct": -1.6,
+      "volume": 165009400
     }
   },
   "vn_market": {
     "vnindex": {
-      "close": 1839.67,
-      "change_pct": 0.93,
+      "close": 1815.66,
+      "change_pct": -0.39,
       "volume": null
     },
     "foreign_net": null,
     "usd_vnd": {
-      "sell_rate": 25990.0,
+      "sell_rate": 26019.0,
       "buy_rate": null,
       "source": "Yahoo Finance (USDVND=X)"
     }
   },
   "derived": {
-    "us_sentiment": "STRONGLY_BULLISH",
+    "us_sentiment": "BULLISH",
     "dxy_trend": "WEAKENING",
     "risk_on": true
   }
