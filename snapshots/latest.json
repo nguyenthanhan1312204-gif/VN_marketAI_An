@@ -1,7 +1,7 @@
 {
   "metadata": {
     "date": "2026-09-18",
-    "generated_at": "2026-09-19T09:23:25.373620+07:00",
+    "generated_at": "2026-09-21T07:06:08.497400+07:00",
     "timezone": "Asia/Ho_Chi_Minh"
   },
   "us_market": {
@@ -9,18 +9,18 @@
       "symbol": "^GSPC",
       "close": 7650.5,
       "change_pct": 0.17,
-      "volume": 6050102000
+      "volume": 8858350000
     },
     "nasdaq": {
       "symbol": "^NDX",
       "close": 29644.17,
       "change_pct": 0.67,
-      "volume": 2509025000
+      "volume": 13286960000
     },
     "dxy": {
       "symbol": "DX-Y.NYB",
-      "close": 100.21,
-      "change_pct": -0.0,
+      "close": 100.22,
+      "change_pct": 0.0,
       "volume": 0
     },
     "vix": {
@@ -31,9 +31,9 @@
     },
     "gold": {
       "symbol": "GC=F",
-      "close": 4415.9,
-      "change_pct": 0.37,
-      "volume": 138899
+      "close": 4424.9,
+      "change_pct": 0.57,
+      "volume": 169188
     }
   },
   "eu_market": {
@@ -64,7 +64,7 @@
     },
     "foreign_net": null,
     "usd_vnd": {
-      "sell_rate": 26019.0,
+      "sell_rate": 26009.0,
       "buy_rate": null,
       "source": "Yahoo Finance (USDVND=X)"
     }
