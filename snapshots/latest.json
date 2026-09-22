@@ -1,39 +1,39 @@
 {
   "metadata": {
-    "date": "2026-09-18",
-    "generated_at": "2026-09-21T07:06:08.497400+07:00",
+    "date": "2026-09-21",
+    "generated_at": "2026-09-22T07:06:42.815645+07:00",
     "timezone": "Asia/Ho_Chi_Minh"
   },
   "us_market": {
     "sp500": {
       "symbol": "^GSPC",
-      "close": 7650.5,
-      "change_pct": 0.17,
-      "volume": 8858350000
+      "close": 7764.7,
+      "change_pct": 1.49,
+      "volume": 3278075000
     },
     "nasdaq": {
       "symbol": "^NDX",
-      "close": 29644.17,
-      "change_pct": 0.67,
-      "volume": 13286960000
+      "close": 30482.35,
+      "change_pct": 2.83,
+      "volume": 1624755000
     },
     "dxy": {
       "symbol": "DX-Y.NYB",
-      "close": 100.22,
-      "change_pct": 0.0,
+      "close": 100.42,
+      "change_pct": 0.2,
       "volume": 0
     },
     "vix": {
       "symbol": "^VIX",
-      "close": 14.81,
-      "change_pct": -4.08,
+      "close": 14.87,
+      "change_pct": 0.41,
       "volume": 0
     },
     "gold": {
       "symbol": "GC=F",
-      "close": 4424.9,
-      "change_pct": 0.57,
-      "volume": 169188
+      "close": 4404.4,
+      "change_pct": -0.46,
+      "volume": 9131
     }
   },
   "eu_market": {
@@ -58,20 +58,20 @@
   },
   "vn_market": {
     "vnindex": {
-      "close": 1815.66,
-      "change_pct": -0.39,
+      "close": 1799.67,
+      "change_pct": -0.88,
       "volume": null
     },
     "foreign_net": null,
     "usd_vnd": {
-      "sell_rate": 26009.0,
+      "sell_rate": 26019.0,
       "buy_rate": null,
       "source": "Yahoo Finance (USDVND=X)"
     }
   },
   "derived": {
-    "us_sentiment": "BULLISH",
-    "dxy_trend": "WEAKENING",
+    "us_sentiment": "STRONGLY_BULLISH",
+    "dxy_trend": "STRENGTHENING",
     "risk_on": true
   }
 }
